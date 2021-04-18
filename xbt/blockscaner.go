@@ -16,6 +16,7 @@
 package xbt
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/asdine/storm"
@@ -350,7 +351,9 @@ func (bs *XBTBlockScanner) newBlockNotify(block *Block, isFork bool) {
 	header.Fork = isFork
 	header.Symbol = bs.wm.Config.Symbol
 
-	//bs.wm.Log.Std.Info("block scanner new Block Notify: %v", header)
+	j, _ := json.Marshal(header)
+	headerJSON := string(j)
+	bs.wm.Log.Std.Info("block scanner new Block Notify: " + headerJSON)
 
 	bs.NewBlockNotify(header)
 }
