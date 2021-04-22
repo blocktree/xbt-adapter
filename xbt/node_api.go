@@ -119,7 +119,9 @@ func (c *Client) PostStringCall(path string, v string) (*gjson.Result, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		j, _ := json.Marshal(v)
+		vStr := string(j)
+		return nil, errors.New(" call api error " + path + ", body : " + vStr + ", reason : " + err.Error() )
 	}
 
 	resp := gjson.ParseBytes(r.Bytes())
