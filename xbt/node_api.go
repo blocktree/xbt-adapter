@@ -16,6 +16,7 @@
 package xbt
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/blocktree/openwallet/v2/log"
 	"github.com/blocktree/xbt-adapter/xbtTransaction"
@@ -85,7 +86,9 @@ func (c *Client) PostCall(path string, v map[string]interface{}) (*gjson.Result,
 	}
 
 	if err != nil {
-		return nil, err
+		j, _ := json.Marshal(v)
+		vStr := string(j)
+		return nil, errors.New(" call api error " + path + ", body : " + vStr + ", reason : " + err.Error() )
 	}
 
 	resp := gjson.ParseBytes(r.Bytes())
