@@ -18,6 +18,7 @@ package xbt
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/blocktree/openwallet/v2/log"
 	"github.com/blocktree/xbt-adapter/xbtTransaction"
 	"github.com/imroc/req"
@@ -74,6 +75,7 @@ func (c *Client) PostCall(path string, v map[string]interface{}) (*gjson.Result,
 	if c.Debug {
 		log.Debug("Start Request API, url : ", path, ", body : ", v)
 	}
+	fmt.Println("Start Request API, url : ", path, ", body : ", v)
 
 	r, err := req.Post(c.BaseURL+path, req.BodyJSON(&v))
 
