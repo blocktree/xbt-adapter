@@ -988,24 +988,86 @@ func (wm *WalletManager) GetTransactionInMemPool(txid string) (*Transaction, err
 //GetAssetsAccountBalanceByAddress 查询账户相关地址的交易记录
 func (bs *XBTBlockScanner) GetBalanceByAddress(address ...string) ([]*openwallet.Balance, error) {
 
-	addrsBalance := make([]*openwallet.Balance, 0)
+	//addrsBalance := make([]*openwallet.Balance, 0)
+	//
+	//for _, addr := range address {
+	//
+	//	balance, err := bs.wm.ApiClient.getBalance(addr)
+	//
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	addrsBalance = append(addrsBalance, &openwallet.Balance{
+	//		Symbol:  bs.wm.Symbol(),
+	//		Address: addr,
+	//		Balance: convertToAmount(uint64(balance.Balance.Int64()), bs.wm.Decimal()),
+	//	})
+	//}
+	//
+	//return addrsBalance, nil
 
-	for _, addr := range address {
-
-		balance, err := bs.wm.ApiClient.getBalance(addr)
-
-		if err != nil {
-			return nil, err
-		}
-
-		addrsBalance = append(addrsBalance, &openwallet.Balance{
-			Symbol:  bs.wm.Symbol(),
-			Address: addr,
-			Balance: convertToAmount(uint64(balance.Balance.Int64()), bs.wm.Decimal()),
-		})
+	type addressBalance struct {
+		Address string
+		Index   uint64
+		Balance *openwallet.Balance
 	}
 
-	return addrsBalance, nil
+	threadControl := make(chan int, 20)
+	defer close(threadControl)
+	resultChan := make(chan *addressBalance, 1024)
+	defer close(resultChan)
+	done := make(chan int, 1)
+	count := len(address)
+	resultBalance := make([]*openwallet.Balance, count)
+	resultSaveFailed := false
+	//save result
+	go func() {
+		for i := 0; i < count; i++ {
+			addr := <-resultChan
+			if addr.Balance != nil {
+				resultBalance[addr.Index] = addr.Balance
+			} else {
+				resultSaveFailed = true
+			}
+		}
+		done <- 1
+	}()
+
+	query := func(addr *addressBalance) {
+		threadControl <- 1
+		defer func() {
+			resultChan <- addr
+			<-threadControl
+		}()
+
+		apiBalance, err := bs.wm.ApiClient.getBalance(addr.Address)
+		if err != nil {
+			bs.wm.Log.Error("get address[", addr.Address, "] balance failed, err=", err)
+			return
+		}
+
+		balance := &openwallet.Balance{
+			Symbol:  bs.wm.Symbol(),
+			Address: addr.Address,
+			Balance: convertToAmount(uint64(apiBalance.Balance.Int64()), bs.wm.Decimal()),
+		}
+		addr.Balance = balance
+	}
+
+	for i, _ := range address {
+		addrbl := &addressBalance{
+			Address: address[i],
+			Index:   uint64(i),
+		}
+		go query(addrbl)
+	}
+
+	<-done
+	if resultSaveFailed {
+		return nil, fmt.Errorf("get balance of addresses failed. ")
+	}
+	return resultBalance, nil
 }
 
 //Run 运行
