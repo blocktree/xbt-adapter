@@ -477,7 +477,7 @@ func (decoder *TransactionDecoder) GetTxFee(feeRate string, amount *decimal.Deci
 	netFeeRate, _ := decimal.NewFromString("0.002")
 
 	//计算出来的手续费
-	fee := amount.Mul( netFeeRate )
+	fee := amount.Mul( netFeeRate ).Round( decoder.wm.Config.Decimal )
 
 	if len(feeRate) > 0 {
 		result, err := decimal.NewFromString( feeRate )
